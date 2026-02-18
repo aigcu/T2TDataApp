@@ -1,0 +1,16 @@
+# Core Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.2
+
+# WebSocket / Socket.IO
+python-socketio==5.11.4
+
+# File Handling
+aiofiles==24.1.0
+python-multipart==0.0.17
+
+# EEG Hardware (OpenBCI Cyton+Daisy via BrainFlow)
+# Pin numpy<2.0 for compatibility with brainflow's nptyping dependency
+numpy<2.0
+brainflow==5.12.1

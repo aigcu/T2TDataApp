@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bci-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      # Mount serial port for EEG hardware access
+      # Uncomment and adjust the device path for your system:
+      # macOS: /dev/cu.usbserial-* (find with: ls /dev/cu.usbserial-*)
+      # Linux: /dev/ttyUSB0
+      # Windows: Use WSL2 with USB passthrough
+    # devices:
+    #   - /dev/cu.usbserial-DM00CXN8:/dev/ttyUSB0  # Adjust for your device
+    # For full serial port access (alternative to devices):
+    # privileged: true
+    networks:
+      - bci-network
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+        - VITE_SOCKET_URL=http://localhost:8000
+    container_name: bci-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - bci-network
+
+networks:
+  bci-network:
+    driver: bridge
+
+volumes:
+  data:
