@@ -162,9 +162,12 @@ function BCIApp() {
   const handleIntakeSubmit = useCallback(
     (participant: ParticipantInfo) => {
       setParticipant(participant);
-      startSession(participant);
+      const started = startSession(participant);
+      if (!started) {
+        setError('Backend connection is not ready');
+      }
     },
-    [setParticipant, startSession]
+    [setParticipant, startSession, setError]
   );
 
   const handleReadyStart = useCallback(() => {
