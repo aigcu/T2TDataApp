@@ -3,12 +3,14 @@ BCI Data Collection - EEG Service
 Handles OpenBCI Cyton+Daisy connection and streaming via BrainFlow.
 """
 
+from __future__ import annotations
+
 import glob
 import platform
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from typing import Callable, Optional
 
@@ -63,9 +65,33 @@ class EEGCollector:
         self._callback: Optional[Callable[[EEGSample], None]] = None
         self._start_time: Optional[datetime] = None
 
+    # Vendor/description strings that identify OpenBCI USB radio dongles.
+    # CP2104 (Silicon Labs) is used on current dongles; FTDI on older ones.
+    _DONGLE_KEYWORDS = (
+        "CP210",        # Silicon Labs CP2104 — current OpenBCI dongle
+        "FTDI",         # FTDI FT231X — older OpenBCI dongle
+        "OpenBCI",      # future-proof direct label
+        "USB Serial",   # generic fallback
+        "USB-Serial",
+    )
+
+    # Known non-dongle virtual COM ports to ignore in fallback detection.
+    _EXCLUDE_KEYWORDS = (
+        "Intel",        # Intel AMT SOL virtual port
+        "Bluetooth",    # BT stack virtual ports
+        "ELTIMA",       # virtual serial software
+        "VMware",       # virtualisation
+        "Hyper-V",
+    )
+
     def _detect_port(self) -> Optional[str]:
         """
-        Auto-detect OpenBCI serial port based on platform.
+        Auto-detect OpenBCI USB radio dongle based on platform.
+
+        On Windows the dongle registers as a virtual COM port via the
+        CP2104 (Silicon Labs) or FTDI chip.  Priority order:
+          1. Port whose description contains a known dongle keyword
+          2. Any remaining COM port (last resort)
 
         Returns:
             Serial port path or None if not found.
@@ -73,20 +99,47 @@ class EEGCollector:
         system = platform.system()
 
         if system == "Darwin":  # macOS
-            # OpenBCI uses FTDI chip, appears as cu.usbserial-*
-            ports = glob.glob("/dev/cu.usbserial-*")
-        elif system == "Windows":
-            # Use pyserial to list COM ports
+            # OpenBCI dongle appears as cu.usbserial-* (FTDI) or cu.SLAB_USBtoUART (CP210x)
+            candidates = (
+                glob.glob("/dev/cu.usbserial-*")
+                + glob.glob("/dev/cu.SLAB_USBtoUART*")
+            )
+            return candidates[0] if candidates else None
+
+        if system == "Windows":
             try:
                 import serial.tools.list_ports
-                ports = [p.device for p in serial.tools.list_ports.comports()
-                        if "USB" in p.description or "Serial" in p.description]
-            except ImportError:
-                ports = []
-        else:  # Linux
-            ports = glob.glob("/dev/ttyUSB*")
+                all_ports = list(serial.tools.list_ports.comports())
 
-        return ports[0] if ports else None
+                # 1st pass — prefer ports matching known dongle signatures
+                for port in all_ports:
+                    desc = (port.description or "") + " " + (port.manufacturer or "")
+                    if any(kw.lower() in desc.lower() for kw in self._DONGLE_KEYWORDS):
+                        print(f"OpenBCI dongle detected: {port.device} — {port.description}")
+                        return port.device
+
+                # 2nd pass — any real hardware port, excluding known virtual ports
+                for port in all_ports:
+                    desc = (port.description or "") + " " + (port.manufacturer or "")
+                    if not port.description or port.description == "n/a":
+                        continue
+                    if any(ex.lower() in desc.lower() for ex in self._EXCLUDE_KEYWORDS):
+                        print(f"Skipping virtual/non-dongle port: {port.device} — {port.description}")
+                        continue
+                    print(f"Falling back to port: {port.device} — {port.description}")
+                    return port.device
+
+                print("No OpenBCI dongle found. Available ports:")
+                for port in all_ports:
+                    print(f"  {port.device} — {port.description}")
+
+            except ImportError:
+                pass
+            return None
+
+        # Linux
+        candidates = glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*")
+        return candidates[0] if candidates else None
 
     @property
     def status(self) -> EEGStatus:
@@ -215,6 +268,9 @@ class EEGCollector:
 
         # Get EEG channel indices for Cyton+Daisy (channels 1-16)
         eeg_channels = BoardShim.get_eeg_channels(self.BOARD_ID)
+        # BrainFlow timestamp channel — Unix epoch seconds (float)
+        timestamp_channel = BoardShim.get_timestamp_channel(self.BOARD_ID)
+        start_epoch = self._start_time.timestamp()
 
         while not self._stop_event.is_set():
             try:
@@ -224,11 +280,9 @@ class EEGCollector:
                 if data.shape[1] > 0:
                     # Process each sample
                     for i in range(data.shape[1]):
-                        # Calculate relative time from session start
-                        now = datetime.now(timezone.utc)
-                        relative_ms = int(
-                            (now - self._start_time).total_seconds() * 1000
-                        )
+                        # Use the hardware timestamp for accurate per-sample timing
+                        sample_epoch = float(data[timestamp_channel][i])
+                        relative_ms = int((sample_epoch - start_epoch) * 1000)
 
                         # Extract 16 channel values
                         channels = [float(data[ch][i]) for ch in eeg_channels]

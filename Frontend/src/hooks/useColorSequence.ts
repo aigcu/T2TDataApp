@@ -1,32 +1,32 @@
 /**
- * BCI Data Collection - Color Sequence Hook
- * Manages the color presentation sequence with accurate timing.
+ * BCI Data Collection - Word Sequence Hook
+ * Manages the word presentation sequence with accurate timing.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  COLOR_DURATION_MS,
-  COLORS,
-  COLORS_PER_TRIAL,
+  WORD_DURATION_MS,
+  WORDS,
+  WORDS_PER_TRIAL,
   REST_DURATION_MS,
 } from '../constants/colors';
 
-interface UseColorSequenceOptions {
+interface UseWordSequenceOptions {
   totalTrials: number;
-  onColorStart?: (colorName: string, colorId: number, trial: number) => void;
-  onColorEnd?: (colorName: string, colorId: number, trial: number) => void;
+  onWordStart?: (wordName: string, wordId: number, trial: number) => void;
+  onWordEnd?: (wordName: string, wordId: number, trial: number) => void;
   onRestStart?: (trial: number) => void;
   onRestEnd?: (trial: number) => void;
   onComplete?: () => void;
 }
 
-export function useColorSequence(options: UseColorSequenceOptions) {
-  const { totalTrials, onColorStart, onColorEnd, onRestStart, onRestEnd, onComplete } =
+export function useWordSequence(options: UseWordSequenceOptions) {
+  const { totalTrials, onWordStart, onWordEnd, onRestStart, onRestEnd, onComplete } =
     options;
 
   const [isRunning, setIsRunning] = useState(false);
   const [currentTrial, setCurrentTrial] = useState(1);
-  const [currentColorIndex, setCurrentColorIndex] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isResting, setIsResting] = useState(false);
 
   const timerRef = useRef<number | null>(null);
@@ -35,7 +35,7 @@ export function useColorSequence(options: UseColorSequenceOptions) {
 
   // Refs to track current state for timer callbacks (avoids stale closures)
   const currentTrialRef = useRef(1);
-  const currentColorIndexRef = useRef(0);
+  const currentWordIndexRef = useRef(0);
   const isRestingRef = useRef(false);
 
   // Clear any running timer
@@ -73,17 +73,17 @@ export function useColorSequence(options: UseColorSequenceOptions) {
 
     // Read from refs to avoid stale closure issues
     const trial = currentTrialRef.current;
-    const colorIdx = currentColorIndexRef.current;
+    const wordIdx = currentWordIndexRef.current;
     const resting = isRestingRef.current;
 
     if (resting) {
       // End rest period
       onRestEnd?.(trial);
 
-      // Check if we need to advance to next color or trial
-      const nextColorIdx = colorIdx + 1;
+      // Check if we need to advance to next word or trial
+      const nextWordIdx = wordIdx + 1;
 
-      if (nextColorIdx >= COLORS_PER_TRIAL) {
+      if (nextWordIdx >= WORDS_PER_TRIAL) {
         // End of trial
         const nextTrial = trial + 1;
 
@@ -95,32 +95,32 @@ export function useColorSequence(options: UseColorSequenceOptions) {
           return;
         }
 
-        // Start next trial, first color - update both state and refs
+        // Start next trial, first word - update both state and refs
         currentTrialRef.current = nextTrial;
-        currentColorIndexRef.current = 0;
+        currentWordIndexRef.current = 0;
         isRestingRef.current = false;
         setCurrentTrial(nextTrial);
-        setCurrentColorIndex(0);
+        setCurrentWordIndex(0);
         setIsResting(false);
 
-        const color = COLORS[0];
-        onColorStart?.(color.name, color.id, nextTrial);
-        runTimer(COLOR_DURATION_MS, advanceSequence);
+        const word = WORDS[0];
+        onWordStart?.(word.name, word.id, nextTrial);
+        runTimer(WORD_DURATION_MS, advanceSequence);
       } else {
-        // Next color in same trial - update both state and refs
-        currentColorIndexRef.current = nextColorIdx;
+        // Next word in same trial - update both state and refs
+        currentWordIndexRef.current = nextWordIdx;
         isRestingRef.current = false;
-        setCurrentColorIndex(nextColorIdx);
+        setCurrentWordIndex(nextWordIdx);
         setIsResting(false);
 
-        const color = COLORS[nextColorIdx];
-        onColorStart?.(color.name, color.id, trial);
-        runTimer(COLOR_DURATION_MS, advanceSequence);
+        const word = WORDS[nextWordIdx];
+        onWordStart?.(word.name, word.id, trial);
+        runTimer(WORD_DURATION_MS, advanceSequence);
       }
     } else {
-      // End color, start rest
-      const color = COLORS[colorIdx];
-      onColorEnd?.(color.name, color.id, trial);
+      // End word, start rest
+      const word = WORDS[wordIdx];
+      onWordEnd?.(word.name, word.id, trial);
 
       // Update both state and ref
       isRestingRef.current = true;
@@ -130,8 +130,8 @@ export function useColorSequence(options: UseColorSequenceOptions) {
     }
   }, [
     totalTrials,
-    onColorStart,
-    onColorEnd,
+    onWordStart,
+    onWordEnd,
     onRestStart,
     onRestEnd,
     onComplete,
@@ -146,17 +146,17 @@ export function useColorSequence(options: UseColorSequenceOptions) {
     setIsRunning(true);
     isRunningRef.current = true;
     currentTrialRef.current = 1;
-    currentColorIndexRef.current = 0;
+    currentWordIndexRef.current = 0;
     isRestingRef.current = false;
     setCurrentTrial(1);
-    setCurrentColorIndex(0);
+    setCurrentWordIndex(0);
     setIsResting(false);
 
-    // Start with first color
-    const color = COLORS[0];
-    onColorStart?.(color.name, color.id, 1);
-    runTimer(COLOR_DURATION_MS, advanceSequence);
-  }, [onColorStart, runTimer, advanceSequence]);
+    // Start with first word
+    const word = WORDS[0];
+    onWordStart?.(word.name, word.id, 1);
+    runTimer(WORD_DURATION_MS, advanceSequence);
+  }, [onWordStart, runTimer, advanceSequence]);
 
   // Stop the sequence
   const stop = useCallback(() => {
@@ -170,10 +170,10 @@ export function useColorSequence(options: UseColorSequenceOptions) {
     stop();
     // Reset both state and refs
     currentTrialRef.current = 1;
-    currentColorIndexRef.current = 0;
+    currentWordIndexRef.current = 0;
     isRestingRef.current = false;
     setCurrentTrial(1);
-    setCurrentColorIndex(0);
+    setCurrentWordIndex(0);
     setIsResting(false);
   }, [stop]);
 
@@ -185,14 +185,14 @@ export function useColorSequence(options: UseColorSequenceOptions) {
     };
   }, [clearTimer]);
 
-  // Get current color
-  const currentColor = isResting ? null : COLORS[currentColorIndex];
+  // Get current word
+  const currentWord = isResting ? null : WORDS[currentWordIndex];
 
   return {
     isRunning,
     currentTrial,
-    currentColorIndex,
-    currentColor,
+    currentWordIndex,
+    currentWord,
     isResting,
     start,
     stop,

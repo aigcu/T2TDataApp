@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 class EventType(str, Enum):
     SESSION_START = "session_start"
     SESSION_END = "session_end"
-    COLOR_START = "color_start"
-    COLOR_END = "color_end"
+    WORD_START = "word_start"
+    WORD_END = "word_end"
     REST_START = "rest_start"
     REST_END = "rest_end"
     EEG_SAMPLE = "eeg_sample"
@@ -42,18 +42,18 @@ class SessionConfig(BaseModel):
     """Session configuration derived from participant info."""
     session_id: str
     participant: ParticipantInfo
-    colors_per_trial: int = 7
-    color_duration_ms: int = 5000
+    words_per_trial: int = 10
+    word_duration_ms: int = 5000
     rest_duration_ms: int = 2000
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 
 
-class ColorEvent(BaseModel):
-    """Event data for color/rest transitions."""
+class WordEvent(BaseModel):
+    """Event data for word/rest transitions."""
     event_type: EventType
-    color: Optional[str] = None
-    color_id: Optional[int] = None
+    word: Optional[str] = None
+    word_id: Optional[int] = None
     trial: int
     timestamp: datetime
     relative_time_ms: int = 0
@@ -80,7 +80,7 @@ class SessionSummary(BaseModel):
     participant_gender: str
     participant_race: str
     total_trials: int
-    colors_presented: int
+    words_presented: int
     rest_periods: int
     start_time: datetime
     end_time: datetime
@@ -88,18 +88,18 @@ class SessionSummary(BaseModel):
 
 
 # Socket.IO event payloads
-class SocketColorStartEvent(BaseModel):
-    """Payload for color_start socket event."""
-    color: str
-    color_id: int
+class SocketWordStartEvent(BaseModel):
+    """Payload for word_start socket event."""
+    word: str
+    word_id: int
     trial: int
     timestamp: str  # ISO format string from client
 
 
-class SocketColorEndEvent(BaseModel):
-    """Payload for color_end socket event."""
-    color: str
-    color_id: int
+class SocketWordEndEvent(BaseModel):
+    """Payload for word_end socket event."""
+    word: str
+    word_id: int
     trial: int
     timestamp: str
 

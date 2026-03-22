@@ -13,12 +13,12 @@ from pathlib import Path
 from typing import Optional
 
 from constants import (
-    COLORS_PER_TRIAL,
-    COLOR_DURATION_MS,
+    WORDS_PER_TRIAL,
+    WORD_DURATION_MS,
     DATA_DIR,
     REST_DURATION_MS,
 )
-from models import ColorEvent, EventType, SessionConfig
+from models import WordEvent, EventType, SessionConfig
 
 # EEG constants
 EEG_SAMPLE_RATE = 125  # Hz (Cyton+Daisy)
@@ -94,8 +94,8 @@ class CSVService:
             f.write(f"participant_gender,{config.participant.gender}\n")
             f.write(f"participant_race,{config.participant.race}\n")
             f.write(f"total_trials,{config.participant.total_trials}\n")
-            f.write(f"colors_per_trial,{COLORS_PER_TRIAL}\n")
-            f.write(f"color_duration_ms,{COLOR_DURATION_MS}\n")
+            f.write(f"words_per_trial,{WORDS_PER_TRIAL}\n")
+            f.write(f"word_duration_ms,{WORD_DURATION_MS}\n")
             f.write(f"rest_duration_ms,{REST_DURATION_MS}\n")
             # EEG metadata
             f.write(f"eeg_enabled,{str(eeg_enabled).lower()}\n")
@@ -110,8 +110,8 @@ class CSVService:
             writer = csv.writer(f)
             header = [
                 "event",
-                "color",
-                "color_id",
+                "word",
+                "word_id",
                 "trial",
                 "timestamp",
                 "relative_time_ms",
@@ -122,7 +122,7 @@ class CSVService:
 
         return str(filepath)
 
-    def append_event(self, session_id: str, event: ColorEvent) -> bool:
+    def append_event(self, session_id: str, event: WordEvent) -> bool:
         """
         Append an event row to the session CSV file.
 
@@ -142,8 +142,8 @@ class CSVService:
                 writer = csv.writer(f)
                 row = [
                     event.event_type.value,
-                    event.color or "",
-                    event.color_id if event.color_id is not None else "",
+                    event.word or "",
+                    event.word_id if event.word_id is not None else "",
                     event.trial,
                     f"{event.timestamp.isoformat()}Z",
                     event.relative_time_ms,
@@ -164,7 +164,7 @@ class CSVService:
         Append an EEG sample row to the session CSV file.
 
         Thread-safe: Uses per-session lock.
-        EEG rows have empty event fields (color, color_id, trial, timestamp).
+        EEG rows have empty event fields (word, word_id, trial, timestamp).
 
         Args:
             session_id: Active session ID
@@ -184,8 +184,8 @@ class CSVService:
                 writer = csv.writer(f)
                 row = [
                     "eeg_sample",  # event type
-                    "",  # color (empty for EEG)
-                    "",  # color_id (empty)
+                    "",  # word (empty for EEG)
+                    "",  # word_id (empty)
                     "",  # trial (empty)
                     "",  # timestamp (empty - use relative_time_ms)
                     relative_time_ms,

@@ -1,6 +1,6 @@
 """
 BCI Data Collection - Socket.IO Event Handlers
-Handles real-time WebSocket events for color/rest marker logging and EEG control.
+Handles real-time WebSocket events for word/rest marker logging and EEG control.
 """
 
 from datetime import datetime
@@ -8,11 +8,11 @@ from typing import Any, Optional
 import socketio
 
 from models import (
-    ColorEvent,
+    WordEvent,
     EventType,
     ParticipantInfo,
-    SocketColorEndEvent,
-    SocketColorStartEvent,
+    SocketWordEndEvent,
+    SocketWordStartEvent,
     SocketRestEndEvent,
     SocketRestStartEvent,
     SocketSessionStartEvent,
@@ -139,8 +139,8 @@ def setup_socket_handlers(
                     "status": "ready",
                     "eeg_streaming": eeg_streaming,
                     "config": {
-                        "colors_per_trial": config.colors_per_trial,
-                        "color_duration_ms": config.color_duration_ms,
+                        "words_per_trial": config.words_per_trial,
+                        "word_duration_ms": config.word_duration_ms,
                         "rest_duration_ms": config.rest_duration_ms,
                         "total_trials": config.participant.total_trials,
                     },
@@ -158,10 +158,10 @@ def setup_socket_handlers(
             await sio.emit("error", {"message": str(e)}, room=sid)
 
     @sio.event
-    async def color_start(sid: str, data: dict[str, Any]):
-        """Handle color_start event - color stimulus begins."""
+    async def word_start(sid: str, data: dict[str, Any]):
+        """Handle word_start event - word stimulus begins."""
         try:
-            event_data = SocketColorStartEvent(**data)
+            event_data = SocketWordStartEvent(**data)
 
             async with sio.session(sid) as session:
                 session_id = session.get("session_id")
@@ -175,10 +175,10 @@ def setup_socket_handlers(
                 event_data.timestamp.replace("Z", "+00:00")
             )
 
-            event = ColorEvent(
-                event_type=EventType.COLOR_START,
-                color=event_data.color,
-                color_id=event_data.color_id,
+            event = WordEvent(
+                event_type=EventType.WORD_START,
+                word=event_data.word,
+                word_id=event_data.word_id,
                 trial=event_data.trial,
                 timestamp=timestamp,
             )
@@ -188,8 +188,8 @@ def setup_socket_handlers(
             await sio.emit(
                 "marker_logged",
                 {
-                    "event_type": "color_start",
-                    "color": event_data.color,
+                    "event_type": "word_start",
+                    "word": event_data.word,
                     "trial": event_data.trial,
                     "timestamp": event_data.timestamp,
                     "success": True,
@@ -201,10 +201,10 @@ def setup_socket_handlers(
             await sio.emit("error", {"message": str(e)}, room=sid)
 
     @sio.event
-    async def color_end(sid: str, data: dict[str, Any]):
-        """Handle color_end event - color stimulus ends."""
+    async def word_end(sid: str, data: dict[str, Any]):
+        """Handle word_end event - word stimulus ends."""
         try:
-            event_data = SocketColorEndEvent(**data)
+            event_data = SocketWordEndEvent(**data)
 
             async with sio.session(sid) as session:
                 session_id = session.get("session_id")
@@ -217,10 +217,10 @@ def setup_socket_handlers(
                 event_data.timestamp.replace("Z", "+00:00")
             )
 
-            event = ColorEvent(
-                event_type=EventType.COLOR_END,
-                color=event_data.color,
-                color_id=event_data.color_id,
+            event = WordEvent(
+                event_type=EventType.WORD_END,
+                word=event_data.word,
+                word_id=event_data.word_id,
                 trial=event_data.trial,
                 timestamp=timestamp,
             )
@@ -230,8 +230,8 @@ def setup_socket_handlers(
             await sio.emit(
                 "marker_logged",
                 {
-                    "event_type": "color_end",
-                    "color": event_data.color,
+                    "event_type": "word_end",
+                    "word": event_data.word,
                     "trial": event_data.trial,
                     "timestamp": event_data.timestamp,
                     "success": True,
@@ -259,7 +259,7 @@ def setup_socket_handlers(
                 event_data.timestamp.replace("Z", "+00:00")
             )
 
-            event = ColorEvent(
+            event = WordEvent(
                 event_type=EventType.REST_START,
                 trial=event_data.trial,
                 timestamp=timestamp,
@@ -298,7 +298,7 @@ def setup_socket_handlers(
                 event_data.timestamp.replace("Z", "+00:00")
             )
 
-            event = ColorEvent(
+            event = WordEvent(
                 event_type=EventType.REST_END,
                 trial=event_data.trial,
                 timestamp=timestamp,
@@ -350,7 +350,7 @@ def setup_socket_handlers(
                         "participant_gender": summary.participant_gender,
                         "participant_race": summary.participant_race,
                         "total_trials": summary.total_trials,
-                        "colors_presented": summary.colors_presented,
+                        "words_presented": summary.words_presented,
                         "rest_periods": summary.rest_periods,
                         "total_duration_ms": summary.total_duration_ms,
                         "start_time": summary.start_time.isoformat() + "Z",

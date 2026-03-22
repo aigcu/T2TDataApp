@@ -9,7 +9,7 @@ import type {
   EEGStatus,
   EEGStatusEvent,
   ParticipantInfo,
-  SocketColorEvent,
+  SocketWordEvent,
   SocketMarkerLoggedEvent,
   SocketRestEvent,
   SocketSessionCompleteEvent,
@@ -32,6 +32,9 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
   const [eegStatus, setEegStatus] = useState<EEGStatus>('disconnected');
   const [eegInfo, setEegInfo] = useState<EEGStatusEvent | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Keep a ref to always-current options so socket listeners don't capture stale callbacks
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Initialize socket connection
   useEffect(() => {
@@ -55,22 +58,22 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
     socket.on('session_created', (data: SocketSessionCreatedEvent) => {
       console.log('Session created:', data);
       setSessionId(data.session_id);
-      options.onSessionCreated?.(data);
+      optionsRef.current.onSessionCreated?.(data);
     });
 
     socket.on('marker_logged', (data: SocketMarkerLoggedEvent) => {
       console.log('Marker logged:', data);
-      options.onMarkerLogged?.(data);
+      optionsRef.current.onMarkerLogged?.(data);
     });
 
     socket.on('session_complete', (data: SocketSessionCompleteEvent) => {
       console.log('Session complete:', data);
-      options.onSessionComplete?.(data);
+      optionsRef.current.onSessionComplete?.(data);
     });
 
     socket.on('error', (data: { message: string }) => {
       console.error('Socket error:', data.message);
-      options.onError?.(data.message);
+      optionsRef.current.onError?.(data.message);
     });
 
     // EEG status updates
@@ -78,7 +81,7 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
       console.log('EEG status:', data);
       setEegStatus(data.status);
       setEegInfo(data);
-      options.onEEGStatus?.(data);
+      optionsRef.current.onEEGStatus?.(data);
     });
 
     return () => {
@@ -95,34 +98,34 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
     socketRef.current.emit('session_start', { participant });
   }, []);
 
-  // Emit color start event
-  const emitColorStart = useCallback(
-    (color: string, colorId: number, trial: number) => {
+  // Emit word start event
+  const emitWordStart = useCallback(
+    (word: string, wordId: number, trial: number) => {
       if (!socketRef.current?.connected) return;
 
-      const event: SocketColorEvent = {
-        color,
-        color_id: colorId,
+      const event: SocketWordEvent = {
+        word,
+        word_id: wordId,
         trial,
         timestamp: new Date().toISOString(),
       };
-      socketRef.current.emit('color_start', event);
+      socketRef.current.emit('word_start', event);
     },
     []
   );
 
-  // Emit color end event
-  const emitColorEnd = useCallback(
-    (color: string, colorId: number, trial: number) => {
+  // Emit word end event
+  const emitWordEnd = useCallback(
+    (word: string, wordId: number, trial: number) => {
       if (!socketRef.current?.connected) return;
 
-      const event: SocketColorEvent = {
-        color,
-        color_id: colorId,
+      const event: SocketWordEvent = {
+        word,
+        word_id: wordId,
         trial,
         timestamp: new Date().toISOString(),
       };
-      socketRef.current.emit('color_end', event);
+      socketRef.current.emit('word_end', event);
     },
     []
   );
@@ -173,8 +176,8 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
     eegStatus,
     eegInfo,
     startSession,
-    emitColorStart,
-    emitColorEnd,
+    emitWordStart,
+    emitWordEnd,
     emitRestStart,
     emitRestEnd,
     endSession,

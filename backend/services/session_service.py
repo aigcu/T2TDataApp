@@ -4,11 +4,12 @@ Manages session lifecycle and coordinates with CSV service.
 """
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
-from constants import COLORS_PER_TRIAL, COLOR_DURATION_MS, REST_DURATION_MS
+from constants import WORDS_PER_TRIAL, WORD_DURATION_MS, REST_DURATION_MS
 from models import (
-    ColorEvent,
+    WordEvent,
     EventType,
     ParticipantInfo,
     SessionConfig,
@@ -23,7 +24,7 @@ class SessionService:
     def __init__(self, csv_service: CSVService):
         self.csv_service = csv_service
         self._sessions: dict[str, SessionConfig] = {}
-        self._session_events: dict[str, list[ColorEvent]] = {}
+        self._session_events: dict[str, list[WordEvent]] = {}
 
     def _generate_session_id(self) -> str:
         """Generate a unique session ID: YYYYMMDD_HHMMSS."""
@@ -40,8 +41,8 @@ class SessionService:
         config = SessionConfig(
             session_id=session_id,
             participant=participant,
-            colors_per_trial=COLORS_PER_TRIAL,
-            color_duration_ms=COLOR_DURATION_MS,
+            words_per_trial=WORDS_PER_TRIAL,
+            word_duration_ms=WORD_DURATION_MS,
             rest_duration_ms=REST_DURATION_MS,
             start_time=start_time,
         )
@@ -53,7 +54,7 @@ class SessionService:
         self.csv_service.create_session_file(config, eeg_enabled=eeg_enabled)
 
         # Log session start event
-        start_event = ColorEvent(
+        start_event = WordEvent(
             event_type=EventType.SESSION_START,
             trial=0,
             timestamp=start_time,
@@ -67,7 +68,7 @@ class SessionService:
         """Get a session by ID."""
         return self._sessions.get(session_id)
 
-    def log_event(self, session_id: str, event: ColorEvent) -> bool:
+    def log_event(self, session_id: str, event: WordEvent) -> bool:
         """Log an event to the session."""
         if session_id not in self._sessions:
             return False
@@ -111,7 +112,7 @@ class SessionService:
         end_time = datetime.now(timezone.utc)
 
         # Log session end event
-        end_event = ColorEvent(
+        end_event = WordEvent(
             event_type=EventType.SESSION_END,
             trial=config.participant.total_trials,
             timestamp=end_time,
@@ -124,8 +125,8 @@ class SessionService:
 
         # Calculate statistics
         events = self._session_events.get(session_id, [])
-        colors_presented = sum(
-            1 for e in events if e.event_type == EventType.COLOR_START
+        words_presented = sum(
+            1 for e in events if e.event_type == EventType.WORD_START
         )
         rest_periods = sum(
             1 for e in events if e.event_type == EventType.REST_START
@@ -142,7 +143,7 @@ class SessionService:
             participant_gender=config.participant.gender,
             participant_race=config.participant.race,
             total_trials=config.participant.total_trials,
-            colors_presented=colors_presented,
+            words_presented=words_presented,
             rest_periods=rest_periods,
             start_time=start_time,
             end_time=end_time,
@@ -175,5 +176,5 @@ class SessionService:
         """Get the CSV filename for a session."""
         filepath = self.csv_service.get_session_filepath(session_id)
         if filepath:
-            return filepath.split("/")[-1]
+            return Path(filepath).name
         return None

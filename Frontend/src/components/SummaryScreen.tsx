@@ -20,6 +20,7 @@ interface SummaryScreenProps {
   onSave: () => void;
   onDelete: () => void;
   onNewSession: () => void;
+  onGoToModel?: () => void;
 }
 
 export function SummaryScreen({
@@ -27,6 +28,7 @@ export function SummaryScreen({
   onSave,
   onDelete,
   onNewSession,
+  onGoToModel,
 }: SummaryScreenProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -104,8 +106,8 @@ export function SummaryScreen({
             <div className="text-gray-400">Total Trials:</div>
             <div className="font-medium text-gray-200">{summary.total_trials}</div>
 
-            <div className="text-gray-400">Colors Presented:</div>
-            <div className="font-medium text-gray-200">{summary.colors_presented}</div>
+            <div className="text-gray-400">Words Presented:</div>
+            <div className="font-medium text-gray-200">{summary.words_presented}</div>
 
             <div className="text-gray-400">Rest Periods:</div>
             <div className="font-medium text-gray-200">{summary.rest_periods}</div>
@@ -136,6 +138,17 @@ export function SummaryScreen({
             Delete Data
           </Button>
         </div>
+
+        {/* Train Model Button */}
+        {onGoToModel && (
+          <Button
+            variant="outline"
+            onClick={onGoToModel}
+            className="w-full mt-3 border-blue-700 text-blue-300 hover:bg-blue-900/30"
+          >
+            Add to Training Data &amp; Open Model Dashboard
+          </Button>
+        )}
 
         {/* New Session Button */}
         <Button

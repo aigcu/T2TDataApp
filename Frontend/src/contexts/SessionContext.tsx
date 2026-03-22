@@ -27,7 +27,7 @@ const initialState: SessionState = {
   sessionId: null,
   sessionConfig: null,
   currentTrial: 1,
-  currentColorIndex: 0,
+  currentWordIndex: 0,
   isResting: false,
   summary: null,
   socketConnected: false,
@@ -53,8 +53,8 @@ function sessionReducer(state: SessionState, action: SessionAction): SessionStat
     case 'SET_TRIAL':
       return { ...state, currentTrial: action.payload };
 
-    case 'SET_COLOR_INDEX':
-      return { ...state, currentColorIndex: action.payload };
+    case 'SET_WORD_INDEX':
+      return { ...state, currentWordIndex: action.payload };
 
     case 'SET_RESTING':
       return { ...state, isResting: action.payload };
@@ -83,7 +83,7 @@ interface SessionContextType {
   setScreen: (screen: ScreenState) => void;
   sessionCreated: (sessionId: string, config: SessionConfig) => void;
   setTrial: (trial: number) => void;
-  setColorIndex: (index: number) => void;
+  setWordIndex: (index: number) => void;
   setResting: (resting: boolean) => void;
   setSummary: (summary: SessionSummary) => void;
   setSocketConnected: (connected: boolean) => void;
@@ -118,8 +118,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     dispatch({ type: 'SET_TRIAL', payload: trial });
   }, []);
 
-  const setColorIndex = useCallback((index: number) => {
-    dispatch({ type: 'SET_COLOR_INDEX', payload: index });
+  const setWordIndex = useCallback((index: number) => {
+    dispatch({ type: 'SET_WORD_INDEX', payload: index });
   }, []);
 
   const setResting = useCallback((resting: boolean) => {
@@ -149,7 +149,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       setScreen,
       sessionCreated,
       setTrial,
-      setColorIndex,
+      setWordIndex,
       setResting,
       setSummary,
       setSocketConnected,
@@ -162,7 +162,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       setScreen,
       sessionCreated,
       setTrial,
-      setColorIndex,
+      setWordIndex,
       setResting,
       setSummary,
       setSocketConnected,

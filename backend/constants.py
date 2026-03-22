@@ -1,37 +1,38 @@
 """
 BCI Data Collection - Constants
-Color definitions and timing configurations for the stimulus protocol.
+Word definitions and timing configurations for the stimulus protocol.
 """
 
 from typing import TypedDict
 
 
-class ColorDefinition(TypedDict):
+class WordDefinition(TypedDict):
     id: int
     name: str
-    hex: str
-    text_color: str  # For contrast when displaying color name
 
 
-# 7 Training Colors shown in order
-COLORS: list[ColorDefinition] = [
-    {"id": 0, "name": "RED", "hex": "#FF0000", "text_color": "#FFFFFF"},
-    {"id": 1, "name": "BLUE", "hex": "#0000FF", "text_color": "#FFFFFF"},
-    {"id": 2, "name": "GREEN", "hex": "#00FF00", "text_color": "#000000"},
-    {"id": 3, "name": "PINK", "hex": "#FF69B4", "text_color": "#000000"},
-    {"id": 4, "name": "YELLOW", "hex": "#FFFF00", "text_color": "#000000"},
-    {"id": 5, "name": "ORANGE", "hex": "#FFA500", "text_color": "#000000"},
-    {"id": 6, "name": "BLACK", "hex": "#000000", "text_color": "#FFFFFF"},
+# 10 Training Words shown in order
+WORDS: list[WordDefinition] = [
+    {"id": 0, "name": "YES"},
+    {"id": 1, "name": "NO"},
+    {"id": 2, "name": "HELP"},
+    {"id": 3, "name": "STOP"},
+    {"id": 4, "name": "GO"},
+    {"id": 5, "name": "WATER"},
+    {"id": 6, "name": "FOOD"},
+    {"id": 7, "name": "PAIN"},
+    {"id": 8, "name": "MORE"},
+    {"id": 9, "name": "NEED"},
 ]
 
 # Timing constants (in milliseconds)
-COLOR_DURATION_MS = 5000  # 5 seconds per color
-REST_DURATION_MS = 2000   # 2 seconds rest between colors
+WORD_DURATION_MS = 5000   # 5 seconds per word
+REST_DURATION_MS = 2000   # 2 seconds rest between words
 COUNTDOWN_DURATION_S = 3  # 3 second countdown
 
 # Derived constants
-COLORS_PER_TRIAL = len(COLORS)  # 7 colors
-TRIAL_DURATION_MS = (COLOR_DURATION_MS + REST_DURATION_MS) * COLORS_PER_TRIAL  # 49 seconds
+WORDS_PER_TRIAL = len(WORDS)  # 10 words
+TRIAL_DURATION_MS = (WORD_DURATION_MS + REST_DURATION_MS) * WORDS_PER_TRIAL  # 70 seconds
 
 # Trial count options with calculated durations
 TRIAL_OPTIONS = [

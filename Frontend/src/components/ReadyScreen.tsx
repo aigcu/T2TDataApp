@@ -77,15 +77,15 @@ export function ReadyScreen({
           <ul className="space-y-3 text-gray-300">
             <li className="flex items-start">
               <span className="text-green-400 mr-2">•</span>
-              <span>You will see <span className="text-white font-medium">7 different colors</span> with their names displayed</span>
+              <span>You will see <span className="text-white font-medium">10 different words</span> displayed one at a time</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-400 mr-2">•</span>
-              <span>Focus on each color for <span className="text-white font-medium">5 seconds</span></span>
+              <span>Focus on each word and <span className="text-white font-medium">think about its meaning</span> for 5 seconds</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-400 mr-2">•</span>
-              <span>Between colors, you'll see a <span className="text-white font-medium">blank white screen</span> - this is rest</span>
+              <span>Between words, you'll see a <span className="text-white font-medium">blank white screen</span> - relax during this rest</span>
             </li>
             <li className="flex items-start">
               <span className="text-green-400 mr-2">•</span>
@@ -99,25 +99,17 @@ export function ReadyScreen({
         </div>
 
         <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
-          <p className="text-sm text-gray-400">
-            The colors will be shown in this order:
+          <p className="text-sm text-gray-400 mb-3">
+            The words will be shown in this order:
           </p>
-          <div className="flex justify-center gap-2 mt-3 flex-wrap">
-            {[
-              { name: 'Red', color: '#FF0000' },
-              { name: 'Blue', color: '#0000FF' },
-              { name: 'Green', color: '#00FF00' },
-              { name: 'Pink', color: '#FF69B4' },
-              { name: 'Yellow', color: '#FFFF00' },
-              { name: 'Orange', color: '#FFA500' },
-              { name: 'Black', color: '#000000' },
-            ].map((c) => (
-              <div
-                key={c.name}
-                className="w-8 h-8 rounded border border-gray-600"
-                style={{ backgroundColor: c.color }}
-                title={c.name}
-              />
+          <div className="flex flex-wrap justify-center gap-2">
+            {['YES', 'NO', 'HELP', 'STOP', 'GO', 'WATER', 'FOOD', 'PAIN', 'MORE', 'NEED'].map((word) => (
+              <span
+                key={word}
+                className="px-3 py-1 rounded bg-gray-700 text-white text-sm font-mono font-semibold border border-gray-600"
+              >
+                {word}
+              </span>
             ))}
           </div>
         </div>

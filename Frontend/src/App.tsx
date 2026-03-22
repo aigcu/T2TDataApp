@@ -8,12 +8,13 @@ import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 import { SessionProvider, useSession } from './contexts/SessionContext';
 import { useSocketIO } from './hooks/useSocketIO';
-import { useColorSequence } from './hooks/useColorSequence';
+import { useWordSequence } from './hooks/useColorSequence';
 import { IntakeForm } from './components/IntakeForm';
 import { ReadyScreen } from './components/ReadyScreen';
 import { Countdown } from './components/Countdown';
-import { ColorPresentation } from './components/ColorPresentation';
+import { WordPresentation } from './components/ColorPresentation';
 import { SummaryScreen } from './components/SummaryScreen';
+import { ModelDashboard } from './components/ModelDashboard';
 import type { ParticipantInfo, SessionSummary } from './types/session';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -25,7 +26,7 @@ function BCIApp() {
     setScreen,
     sessionCreated,
     setTrial,
-    setColorIndex,
+    setWordIndex,
     setResting,
     setSummary,
     setSocketConnected,
@@ -41,8 +42,8 @@ function BCIApp() {
       sessionCreated(data.session_id, {
         session_id: data.session_id,
         participant: state.participant!,
-        colors_per_trial: data.config.colors_per_trial,
-        color_duration_ms: data.config.color_duration_ms,
+        words_per_trial: data.config.words_per_trial,
+        word_duration_ms: data.config.word_duration_ms,
         rest_duration_ms: data.config.rest_duration_ms,
       });
       setScreen('ready');
@@ -71,8 +72,8 @@ function BCIApp() {
     isConnected,
     eegStatus,
     startSession,
-    emitColorStart,
-    emitColorEnd,
+    emitWordStart,
+    emitWordEnd,
     emitRestStart,
     emitRestEnd,
     endSession,
@@ -88,22 +89,22 @@ function BCIApp() {
     setSocketConnected(isConnected);
   }, [isConnected, setSocketConnected]);
 
-  // Color sequence handlers
-  const handleColorStart = useCallback(
-    (colorName: string, colorId: number, trial: number) => {
+  // Word sequence handlers
+  const handleWordStart = useCallback(
+    (wordName: string, wordId: number, trial: number) => {
       setTrial(trial);
-      setColorIndex(colorId);
+      setWordIndex(wordId);
       setResting(false);
-      emitColorStart(colorName, colorId, trial);
+      emitWordStart(wordName, wordId, trial);
     },
-    [setTrial, setColorIndex, setResting, emitColorStart]
+    [setTrial, setWordIndex, setResting, emitWordStart]
   );
 
-  const handleColorEnd = useCallback(
-    (colorName: string, colorId: number, trial: number) => {
-      emitColorEnd(colorName, colorId, trial);
+  const handleWordEnd = useCallback(
+    (wordName: string, wordId: number, trial: number) => {
+      emitWordEnd(wordName, wordId, trial);
     },
-    [emitColorEnd]
+    [emitWordEnd]
   );
 
   const handleRestStart = useCallback(
@@ -127,18 +128,35 @@ function BCIApp() {
 
   const {
     currentTrial,
-    currentColor,
+    currentWord,
     isResting,
-    start: startColorSequence,
-    reset: resetColorSequence,
-  } = useColorSequence({
+    start: startWordSequence,
+    stop: stopWordSequence,
+    reset: resetWordSequence,
+  } = useWordSequence({
     totalTrials: state.participant?.total_trials || 1,
-    onColorStart: handleColorStart,
-    onColorEnd: handleColorEnd,
+    onWordStart: handleWordStart,
+    onWordEnd: handleWordEnd,
     onRestStart: handleRestStart,
     onRestEnd: handleRestEnd,
     onComplete: handleSequenceComplete,
   });
+
+  const handleAbortSession = useCallback(async () => {
+    stopWordSequence();
+    // Use REST DELETE directly — do NOT emit session_end via socket, which would
+    // trigger session_complete and navigate to the summary screen.
+    if (state.sessionId) {
+      try {
+        await fetch(`${API_URL}/api/session/${state.sessionId}`, { method: 'DELETE' });
+      } catch (error) {
+        console.error('Failed to delete aborted session:', error);
+      }
+    }
+    reset();
+    resetWordSequence();
+    setLocalSummary(null);
+  }, [stopWordSequence, state.sessionId, reset, resetWordSequence]);
 
   // Screen handlers
   const handleIntakeSubmit = useCallback(
@@ -155,8 +173,8 @@ function BCIApp() {
 
   const handleCountdownComplete = useCallback(() => {
     setScreen('running');
-    startColorSequence();
-  }, [setScreen, startColorSequence]);
+    startWordSequence();
+  }, [setScreen, startWordSequence]);
 
   const handleSaveData = useCallback(async () => {
     if (!state.sessionId) return;
@@ -185,19 +203,30 @@ function BCIApp() {
 
       toast.success('Data deleted successfully');
       reset();
-      resetColorSequence();
+      resetWordSequence();
       setLocalSummary(null);
     } catch (error) {
       toast.error('Failed to delete data');
       console.error(error);
     }
-  }, [state.sessionId, reset, resetColorSequence]);
+  }, [state.sessionId, reset, resetWordSequence]);
 
   const handleNewSession = useCallback(() => {
     reset();
-    resetColorSequence();
+    resetWordSequence();
     setLocalSummary(null);
-  }, [reset, resetColorSequence]);
+  }, [reset, resetWordSequence]);
+
+  const handleGoToModel = useCallback(() => {
+    setScreen('model');
+  }, [setScreen]);
+
+  const handleBackFromModel = useCallback(() => {
+    reset();
+    resetWordSequence();
+    setLocalSummary(null);
+    setScreen('intake');
+  }, [reset, resetWordSequence, setScreen]);
 
   // Warn before closing during session
   useEffect(() => {
@@ -216,7 +245,19 @@ function BCIApp() {
   const renderScreen = () => {
     switch (state.screenState) {
       case 'intake':
-        return <IntakeForm onSubmit={handleIntakeSubmit} />;
+        return (
+          <>
+            <IntakeForm onSubmit={handleIntakeSubmit} />
+            <button
+              onClick={handleGoToModel}
+              className="fixed bottom-4 right-4 z-50 text-xs px-3 py-1.5 rounded-full
+                         bg-gray-800/80 text-gray-400 border border-gray-700
+                         hover:bg-gray-700 hover:text-white transition-colors"
+            >
+              Model Dashboard
+            </button>
+          </>
+        );
 
       case 'ready':
         return (
@@ -234,11 +275,12 @@ function BCIApp() {
 
       case 'running':
         return (
-          <ColorPresentation
-            currentColor={currentColor}
+          <WordPresentation
+            currentWord={currentWord}
             isResting={isResting}
             currentTrial={currentTrial}
             totalTrials={state.participant?.total_trials || 1}
+            onStop={handleAbortSession}
           />
         );
 
@@ -250,6 +292,15 @@ function BCIApp() {
             onSave={handleSaveData}
             onDelete={handleDeleteData}
             onNewSession={handleNewSession}
+            onGoToModel={handleGoToModel}
+          />
+        );
+
+      case 'model':
+        return (
+          <ModelDashboard
+            onBack={handleBackFromModel}
+            preSelectedSessionId={state.sessionId}
           />
         );
 

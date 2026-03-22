@@ -11,18 +11,21 @@ import socketio
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field as PydanticField
 
-from constants import COLORS, COLOR_DURATION_MS, REST_DURATION_MS, TRIAL_OPTIONS
+from constants import WORDS, WORD_DURATION_MS, REST_DURATION_MS, TRIAL_OPTIONS
 from models import ParticipantInfo, SessionStartRequest, SessionStartResponse
 from services.csv_service import CSVService
 from services.session_service import SessionService
 from services.eeg_service import EEGCollector
+from services.training_service import TrainingService
 from socket_handlers import setup_socket_handlers
 
 # Initialize services
 csv_service = CSVService()
 session_service = SessionService(csv_service)
 eeg_collector = EEGCollector()
+training_service = TrainingService()
 
 # Initialize Socket.IO
 sio = socketio.AsyncServer(
@@ -57,7 +60,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="BCI Data Collection API",
-    description="API for automated BCI/EEG data collection with color stimuli",
+    description="API for automated BCI/EEG data collection with word stimuli",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -83,8 +86,8 @@ async def health_check():
 async def get_config():
     """Get configuration for the frontend."""
     return {
-        "colors": COLORS,
-        "color_duration_ms": COLOR_DURATION_MS,
+        "words": WORDS,
+        "word_duration_ms": WORD_DURATION_MS,
         "rest_duration_ms": REST_DURATION_MS,
         "trial_options": TRIAL_OPTIONS,
     }
@@ -179,6 +182,62 @@ async def delete_session(session_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"status": "deleted", "session_id": session_id}
+
+
+# ── Training / Model endpoints ────────────────────────────────────────────────
+
+class TrainRequest(BaseModel):
+    session_ids: list[str]
+    epochs: int = PydanticField(default=50, ge=1, le=1000)
+
+
+@app.get("/api/sessions/all")
+async def list_all_sessions():
+    """List metadata for every saved session CSV on disk."""
+    return training_service.list_sessions()
+
+
+@app.get("/api/model/status")
+async def get_model_status():
+    """Get current training status and checkpoint info."""
+    return training_service.get_status_dict()
+
+
+@app.post("/api/model/train")
+async def start_training(request: TrainRequest):
+    """Start training the EEG-to-text model on the selected sessions."""
+    started = training_service.start_training(request.session_ids, request.epochs)
+    if not started:
+        raise HTTPException(status_code=409, detail="Training is already in progress")
+    return {"status": "started", "epochs": request.epochs, "session_ids": request.session_ids}
+
+
+@app.post("/api/model/stop")
+async def stop_training():
+    """Signal the training thread to stop after the current epoch."""
+    training_service.stop_training()
+    return {"status": "stop_requested"}
+
+
+@app.get("/api/session/{session_id}/events")
+async def get_session_events(session_id: str):
+    """Return the event timeline for a session (used for playback)."""
+    events = training_service.get_session_events(session_id)
+    if events is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"session_id": session_id, "events": events}
+
+
+@app.get("/api/session/{session_id}/predict")
+async def predict_session(session_id: str):
+    """Run model inference on each word window in a saved session."""
+    results = training_service.predict_session(session_id)
+    if results is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found or no trained model checkpoint exists",
+        )
+    return {"session_id": session_id, "predictions": results}
 
 
 # Mount Socket.IO

@@ -1,245 +1,261 @@
-# EEG Data Collection System with OpenBCI Cyton+Daisy
+# Thought-to-Text (T2T) EEG Data Collection App
 
-A professional-grade EEG data collection system designed for Brain-Computer Interface (BCI) research. This system presents color stimuli to participants while recording 16-channel EEG data using the OpenBCI Cyton+Daisy biosensing board.
+A BCI data collection system for training a Thought-to-Text machine learning model. Participants imagine speaking 10 target words while 16-channel EEG data is recorded, timestamped, and exported as structured CSV files ready for model training.
 
-## 🧠 Features
+## Features
 
-- **16-Channel EEG Recording**: Full support for OpenBCI Cyton+Daisy board (125 Hz sample rate)
-- **Automated Stimulus Presentation**: Sequential display of 7 distinct colors with precise timing
-- **Real-time Data Streaming**: WebSocket-based live EEG data transmission
-- **Session Management**: Participant information tracking and session organization
-- **CSV Data Export**: Structured data output with timestamps and channel readings
-- **Local Development**: Simple Python backend and React frontend setup
-- **Web-based Interface**: React frontend for experiment control and monitoring
-- **Hardware Auto-detection**: Automatic serial port discovery for OpenBCI devices
+- **16-Channel EEG Recording** — OpenBCI Cyton+Daisy at 125 Hz
+- **10-Word Stimulus Protocol** — YES, NO, HELP, STOP, GO, WATER, FOOD, PAIN, MORE, NEED
+- **Real-time Event Markers** — Socket.IO events sync EEG samples with stimulus onset/offset
+- **Session Management** — Participant demographics, configurable trial counts
+- **CSV Export** — Structured per-session files with word + EEG channels aligned by timestamp
+- **ML-Ready Output** — CSV format parsed directly by `SimEEgN_LTSM_Train.ipynb`
 
-## 🛠 Technology Stack
+## Technology Stack
 
-- **Backend**: Python 3.11 + FastAPI + BrainFlow
-- **Frontend**: React + TypeScript + Vite + TailwindCSS
-- **Communication**: Socket.IO for real-time data streaming
-- **Data Storage**: CSV files with structured session data
-- **Deployment**: Local Python + Node.js
-- **EEG Interface**: BrainFlow library for OpenBCI hardware communication
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.11+ · FastAPI · python-socketio · BrainFlow |
+| Frontend | React 19 · TypeScript · Vite · TailwindCSS · Socket.IO client |
+| EEG Hardware | OpenBCI Cyton+Daisy · BrainFlow library |
+| Data | CSV files in `backend/data/sessions/` |
 
-## 🔧 Hardware Requirements
+---
 
-### OpenBCI Cyton+Daisy Board
-- **Model**: OpenBCI Cyton (8-channel) + Daisy Module (8 additional channels)
-- **Total Channels**: 16 EEG channels
-- **Sample Rate**: 125 Hz
-- **Resolution**: 24-bit
-- **Connection**: USB dongle with FTDI serial interface
-- **Power**: Rechargeable battery or USB power
+## Hardware Requirements
 
-## 🚀 Installation & Setup
+### OpenBCI ThinkPulse / Cyton+Daisy Setup
+
+| Component | Detail |
+|---|---|
+| Headset | OpenBCI ThinkPulse Active Electrode EEG Cap (16 ch) |
+| Board | OpenBCI Cyton (8 ch) + Daisy Module (8 ch) = 16 ch total |
+| Dongle | OpenBCI USB Radio Dongle (CP2104 / Silicon Labs chip) |
+| Sample Rate | 125 Hz |
+| Resolution | 24-bit |
+| Connection | USB dongle → virtual COM port → BrainFlow → backend |
+
+### Connecting the Dongle (Windows)
+
+1. Plug the USB radio dongle into any USB port.
+2. Windows will install the **Silicon Labs CP210x** driver automatically (or download from Silicon Labs if it fails).
+3. Open **Device Manager → Ports (COM & LPT)** — note the `COMx` number (e.g. `COM3`).
+4. Power on the Cyton board. The green LED should blink then stay solid — this means the board has paired with the dongle.
+5. The backend auto-detects the port. If detection fails, set it manually (see Troubleshooting).
+
+> **Note:** The Cyton communicates with its dongle over a 2.4 GHz radio link. The dongle itself presents as a standard serial (COM) port — BrainFlow uses `CYTON_DAISY_BOARD = 2` for the 16-channel configuration.
+
+---
+
+## Installation
 
 ### Prerequisites
 
-1. **Python 3.11+** installed on your system
-2. **Node.js 18+** and npm
-3. **OpenBCI Cyton+Daisy** board with USB dongle
-4. **Git** for cloning the repository
+- Python 3.11 or higher (tested on 3.11 and 3.14)
+- Node.js 18+ and npm
+- Git
 
-### Step 1: Clone the Repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/yourusername/EEG-Data-Collection.git
-cd EEG-Data-Collection
+git clone https://github.com/yourusername/T2TDataApp.git
+cd T2TDataApp
 ```
 
-### Step 2: Install and Run
+### 2. Backend
 
 ```bash
-# Backend
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
+python -m venv ../venv
+# Windows:
+..\venv\Scripts\activate
+# macOS/Linux:
+source ../venv/bin/activate
 
-# Frontend (new terminal)
+pip install -r requirements.txt
+```
+
+### 3. Frontend
+
+```bash
 cd Frontend
 npm install
-npm run dev
 ```
 
-### Step 3: Verify Connection
+---
 
-1. Access the web interface: http://localhost:5173
-2. Check the EEG hardware status indicator (should show "Connected")
-3. The backend will auto-detect your OpenBCI device
+## Running the App
 
-## 💻 Usage
+### Quick Start (Windows — double-click)
 
-### Starting a Data Collection Session
+Double-click **`start.bat`** in the project root. It will:
+1. Kill any processes already on ports 8000 / 5173 / 5174
+2. Open a terminal window for the backend (`http://localhost:8000`)
+3. Open a terminal window for the frontend (`http://localhost:5173`)
 
-1. **Access the Web Interface**
-   - Open browser to http://localhost:3000
-   
-2. **Enter Participant Information**
-   - Fill in participant details (ID, age, sex, race)
-   - Select number of trials (5, 10, 25, 50, or 100)
-   - Click "Start Session"
+### Manual Start
 
-3. **Verify Hardware Connection**
-   - Check that EEG status shows "Connected"
-   - If disconnected, the system will attempt auto-reconnection
+**Terminal 1 — Backend:**
+```bash
+cd backend
+..\venv\Scripts\activate          # Windows
+# source ../venv/bin/activate     # macOS/Linux
+uvicorn main:socket_app --host 0.0.0.0 --port 8000 --reload
+```
 
-4. **Run the Experiment**
-   - Click "Start Collection" when ready
-   - Participant views color sequence:
-     - 3-second countdown
-     - 7 colors displayed for 5 seconds each
-     - 2-second rest periods between colors
-   - EEG data is recorded continuously
+**Terminal 2 — Frontend:**
+```bash
+cd Frontend
+npm run dev          # standard start
+# npm run fresh      # kills ports first, then starts
+```
 
-5. **Complete Session**
-   - Data automatically saved after each trial
-   - Download CSV file via "Download Data" button
-   - Session summary displayed with trial count and duration
+Open `http://localhost:5173` in your browser.
 
-### Data Collection Protocol
+---
 
-Each trial consists of:
-- **Countdown**: 3 seconds
-- **Color Sequence**: 7 colors × (5s display + 2s rest) = 49 seconds
-- **Total Trial Duration**: ~52 seconds
+## Running a Session
 
-Colors presented in order:
-1. RED (#FF0000)
-2. BLUE (#0000FF)
-3. GREEN (#00FF00)
-4. PINK (#FF69B4)
-5. YELLOW (#FFFF00)
-6. ORANGE (#FFA500)
-7. BLACK (#000000)
+1. **Fill in participant info** — name, age, sex, race, number of trials.
+2. **Connect EEG** — click "Connect EEG" on the Ready screen. Status will change to "Connected".
+3. **Click Start** — a 3-second countdown plays, then the word sequence begins.
+4. **Word protocol per trial:**
+   - 10 words × (5 s display + 2 s rest) = **70 seconds per trial**
+   - Participant imagines speaking each word during its 5-second window
+5. **Stop mid-session** — click the `✕ Stop` button (top-left) at any time to abort and delete the session.
+6. **Save or Delete** — after the session completes, choose to save the CSV or discard.
 
-## 📊 Data Format
+### Trial Duration Reference
 
-CSV files are saved to `data/sessions/` with the following structure:
+| Trials | Duration |
+|---|---|
+| 5 | ~6 min |
+| 10 | ~12 min |
+| 25 | ~29 min |
+| 50 | ~58 min |
+| 100 | ~117 min |
 
+---
+
+## Data Format
+
+Session CSVs are saved to `backend/data/sessions/session_<timestamp>_<name>.csv`.
+
+### Metadata header (first lines)
+```
+# session_id: ...
+# participant: ...
+# words_per_trial: 10
+# word_duration_ms: 5000
+# rest_duration_ms: 2000
+```
+
+### Data rows
 ```csv
-timestamp,participant_id,age,sex,race,trial_number,color_id,color_name,event_type,relative_time_ms,ch1,ch2,...,ch16
-2024-11-30T10:15:30.123Z,P001,25,Male,Asian,1,0,RED,color_start,0,12.5,13.2,...,11.8
-2024-11-30T10:15:30.131Z,P001,25,Male,Asian,1,0,RED,eeg_sample,8,12.6,13.1,...,11.7
-...
+event, word, word_id, trial, timestamp, relative_time_ms, ch1, ch2, ..., ch16
+word_start, YES, 0, 1, 2025-01-01T10:00:00Z, 0, 12.5, 13.2, ..., 11.8
+eeg_sample,    ,  , 1, 2025-01-01T10:00:00.008Z, 8, 12.6, ...
+word_end,   YES, 0, 1, 2025-01-01T10:00:05Z, 5000, ...
+rest_start,    ,  , 1, ...
+rest_end,      ,  , 1, ...
 ```
 
-### Column Descriptions:
-- **timestamp**: ISO 8601 timestamp
-- **participant_id**: Unique participant identifier
-- **age, sex, race**: Demographic information
-- **trial_number**: Current trial (1-based)
-- **color_id**: Color index (0-6)
-- **color_name**: Color being displayed
-- **event_type**: `color_start`, `color_end`, `rest_start`, `rest_end`, or `eeg_sample`
-- **relative_time_ms**: Milliseconds since session start
-- **ch1-ch16**: EEG channel values in microvolts
+| Column | Description |
+|---|---|
+| `event` | `word_start`, `word_end`, `rest_start`, `rest_end`, `eeg_sample` |
+| `word` | Word name (YES, NO, …) — blank for eeg_sample rows |
+| `word_id` | Word index 0–9 |
+| `trial` | Trial number (1-based) |
+| `timestamp` | ISO 8601 UTC |
+| `relative_time_ms` | ms since session start |
+| `ch1`–`ch16` | EEG channel values in µV |
 
-## 🔌 API Endpoints
+---
 
-### Health & Configuration
-- `GET /api/health` - System health check
-- `GET /api/config` - Get stimulus configuration
-- `GET /api/eeg/status` - EEG hardware status
+## ML Training
 
-### Session Management
-- `POST /api/session/start` - Initialize new session
-- `GET /api/session/{session_id}` - Get session details
-- `POST /api/session/{session_id}/end` - End session
-- `GET /api/session/{session_id}/csv` - Download CSV data
-
-### WebSocket Events
-- `connect` - Client connection established
-- `session:start` - Begin data collection
-- `trial:complete` - Trial finished
-- `eeg:sample` - Real-time EEG data (if enabled)
-
-## 🐛 Troubleshooting
-
-### OpenBCI Not Detected
-
-1. **Verify physical connection**:
-   - Check USB dongle is properly inserted
-   - Ensure Cyton board is powered on (blue LED)
-   - Confirm Daisy module is attached
-
-2. **Check serial port permissions**:
-   ```bash
-   # Linux: Add user to dialout group
-   sudo usermod -a -G dialout $USER
-   
-   # macOS: Check port accessibility
-   ls -l /dev/cu.usbserial-*
-   ```
-
-### Data Not Recording
-
-1. Check backend logs for errors in the terminal running `python main.py`
-
-2. Verify data directory permissions:
-   ```bash
-   ls -la data/sessions/
-   ```
-
-3. Ensure sufficient disk space
-
-4. Check backend/data/sessions/ (It'll probaly be there)
-
-### Connection Issues
-
-1. **Serial port busy**:
-   - Close any other programs using the port (OpenBCI GUI, etc.)
-   - Restart Docker containers
-
-2. **BrainFlow errors**:
-   - Update BrainFlow: `pip install --upgrade brainflow`
-   - Check board firmware version
-
-3. **WebSocket disconnections**:
-   - Check network settings
-   - Verify firewall allows ports 3000 and 8000
-
-
-## 📝 Development
-
-### Validating Session Data
-
-After collecting EEG data, you can validate session integrity using the parser script:
+After collecting sessions, train the EEGNet+LSTM model:
 
 ```bash
-# Validate a single session
-python3 scripts/parse_session.py backend/data/sessions/session_YYYYMMDD_HHMMSS_name.csv
-
-# Validate all sessions in a directory
-python3 scripts/parse_session.py backend/data/sessions/
+# From project root (venv active)
+jupyter notebook "SimEEgN_LTSM_Train (1).ipynb"
 ```
 
-The script checks:
-- **Sample rate**: Verifies actual vs expected 125 Hz
-- **Data loss**: Calculates percentage of missing samples
-- **Gap detection**: Finds intervals where samples were lost
-- **Per-trial breakdown**: Shows capture rate for each trial
-- **Channel health**: Validates all 16 EEG channels have data
+The notebook automatically detects CSV files in `backend/data/sessions/`:
+- If sessions exist → trains on real EEG data (`RealEEGDataset`)
+- If no sessions yet → trains on simulated data (`EEGDataset`) for testing
 
-Example output:
+---
+
+## API Reference
+
+### REST
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/health` | Health check |
+| GET | `/api/config` | Stimulus config (words, timing) |
+| GET | `/api/eeg/status` | EEG hardware status |
+| DELETE | `/api/session/{id}` | Delete session and CSV |
+| POST | `/api/session/{id}/save` | Flush session to disk |
+
+### Socket.IO Events (client → server)
+
+| Event | Payload | Description |
+|---|---|---|
+| `start_session` | participant info | Begin EEG streaming |
+| `word_start` | `{word, word_id, trial, timestamp}` | Stimulus onset marker |
+| `word_end` | `{word, word_id, trial, timestamp}` | Stimulus offset marker |
+| `rest_start` | `{trial, timestamp}` | Rest period start |
+| `rest_end` | `{trial, timestamp}` | Rest period end |
+| `end_session` | — | Stop streaming, finalize CSV |
+
+---
+
+## Troubleshooting
+
+### EEG not connecting
+
+**Check LED states:**
+- Cyton board **solid blue** = powered, not paired
+- Cyton board **green blink** = pairing with dongle
+- Cyton board **solid green** = paired and ready
+
+**Windows — driver not installed:**
+1. Open Device Manager
+2. Look for unknown device or "CP210x"
+3. Download Silicon Labs CP210x driver and install
+4. Replug the dongle
+
+**Port not auto-detected:**
+The backend logs which port it finds. If detection fails:
+1. Open Device Manager → Ports (COM & LPT)
+2. Note the COMx number (e.g. `COM5`)
+3. Set it in `backend/services/eeg_service.py` by changing the `EEGCollector` instantiation in `socket_handlers.py` to pass `port="COM5"` explicitly
+
+**Another app using the port:**
+Close OpenBCI GUI, Arduino IDE, or any other serial monitor before running this app.
+
+**Cyton not paired to dongle:**
+- Make sure the dongle is plugged in *before* powering on the Cyton board
+- The board pairs on power-up; re-power the board after inserting the dongle
+
+### Frontend can't reach backend
+
+- Confirm backend is running: `curl http://localhost:8000/api/health`
+- Check firewall allows port 8000
+- Ensure `VITE_API_URL` in `.env` matches the backend address (default: `http://localhost:8000`)
+
+### Data looks flat / all zeros
+
+- The board may be streaming but electrodes aren't making contact
+- Check gel/contact quality on ThinkPulse cap electrodes
+- Confirm Daisy module is firmly seated on Cyton board
+
+### Validating recorded data
+
+```bash
+python scripts/parse_session.py backend/data/sessions/session_YYYYMMDD_HHMMSS_name.csv
 ```
-============================================================
-EEG DATA INTEGRITY REPORT
-============================================================
-Session: 20251204_005053
-Participant: Zach (Age: 20)
 
-SAMPLE RATE ANALYSIS
---------------------
-Expected rate: 125 Hz
-Actual rate: 125.0 Hz
-Actual samples: 10,979
-Data loss: 0.0% [OK]
-
-PER-TRIAL BREAKDOWN
--------------------
-Trial 1: 6,157/6,150 samples (100.1%) [OK]
-Trial 2: 3,392/6,151 samples (55.1%) [LOW]
-```
+Checks sample rate accuracy, data loss %, per-trial capture rate, and channel health.
