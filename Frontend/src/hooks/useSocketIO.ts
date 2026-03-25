@@ -93,9 +93,11 @@ export function useSocketIO(options: UseSocketIOOptions = {}) {
   const startSession = useCallback((participant: ParticipantInfo) => {
     if (!socketRef.current?.connected) {
       console.error('Socket not connected');
-      return;
+      optionsRef.current.onError?.('Backend connection is not ready. Make sure the backend is running on http://localhost:8000 and try again.');
+      return false;
     }
     socketRef.current.emit('session_start', { participant });
+    return true;
   }, []);
 
   // Emit word start event
