@@ -156,12 +156,49 @@ export interface SessionMeta {
   start_time?: string;
   end_time?: string;
   eeg_enabled?: string;
+  eeg_sample_count?: number;
 }
+
+export interface TrainingConfig {
+  lr: number;
+  batch_size: number;
+  warmup_epochs: number;
+  grad_clip: number;
+  early_stop_patience: number;
+  checkpoint_every_n: number;
+  aug_channel_dropout: boolean;
+  aug_gaussian_noise: boolean;
+  aug_amplitude_scaling: boolean;
+  aug_time_shift: boolean;
+  aug_freq_band_dropout: boolean;
+  use_focal_loss: boolean;
+  focal_gamma: number;
+  label_smoothing: number;
+}
+
+export const DEFAULT_TRAINING_CONFIG: TrainingConfig = {
+  lr: 0.0002,
+  batch_size: 8,
+  warmup_epochs: 5,
+  grad_clip: 1.0,
+  early_stop_patience: 25,
+  checkpoint_every_n: 5,
+  aug_channel_dropout: true,
+  aug_gaussian_noise: true,
+  aug_amplitude_scaling: true,
+  aug_time_shift: true,
+  aug_freq_band_dropout: true,
+  use_focal_loss: false,
+  focal_gamma: 2.0,
+  label_smoothing: 0.1,
+};
 
 export interface TrainingEpochLog {
   epoch: number;
   loss: number;
+  val_loss: number;
   accuracy: number;
+  lr: number;
 }
 
 export interface ModelCheckpointInfo {
@@ -169,6 +206,15 @@ export interface ModelCheckpointInfo {
   epoch?: number;
   vocab_size?: number;
   vocab?: string[];
+  best_val_loss?: number | null;
+  config?: Partial<TrainingConfig>;
+}
+
+export interface CheckpointMeta {
+  name: string;
+  epoch: number;
+  val_loss: number | null;
+  is_best: boolean;
 }
 
 export interface TrainingStatusResponse {
@@ -176,10 +222,16 @@ export interface TrainingStatusResponse {
   current_epoch: number;
   total_epochs: number;
   loss: number;
+  val_loss: number;
+  best_val_loss: number | null;
+  best_epoch: number;
   accuracy: number;
+  lr: number;
   error: string | null;
   log: TrainingEpochLog[];
+  per_word_accuracy: Record<string, number>;
   checkpoint: ModelCheckpointInfo;
+  available_checkpoints: CheckpointMeta[];
 }
 
 export interface SessionEvent {

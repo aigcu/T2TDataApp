@@ -15,6 +15,7 @@ numpy>=2.0
 brainflow>=5.12.1
 pyserial>=3.5
 
-# ML Model (EEGNet + BiLSTM)
+# ML Model (EEGConformer: EEGNet + Conformer encoder, hybrid CTC+CE loss)
 # For GPU support install PyTorch separately: https://pytorch.org/get-started/locally/
 torch>=2.0.0
+scipy>=1.11.0

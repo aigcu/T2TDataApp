@@ -18,7 +18,7 @@ from models import ParticipantInfo, SessionStartRequest, SessionStartResponse
 from services.csv_service import CSVService
 from services.session_service import SessionService
 from services.eeg_service import EEGCollector
-from services.training_service import TrainingService
+from services.training_service import TrainingConfig, TrainingService
 from socket_handlers import setup_socket_handlers
 
 # Initialize services
@@ -189,6 +189,20 @@ async def delete_session(session_id: str):
 class TrainRequest(BaseModel):
     session_ids: list[str]
     epochs: int = PydanticField(default=50, ge=1, le=1000)
+    lr: float = PydanticField(default=2e-4, ge=1e-6, le=0.1)
+    batch_size: int = PydanticField(default=8, ge=1, le=128)
+    warmup_epochs: int = PydanticField(default=5, ge=0, le=100)
+    grad_clip: float = PydanticField(default=1.0, ge=0.0, le=10.0)
+    early_stop_patience: int = PydanticField(default=25, ge=0, le=500)
+    checkpoint_every_n: int = PydanticField(default=5, ge=1, le=100)
+    aug_channel_dropout: bool = True
+    aug_gaussian_noise: bool = True
+    aug_amplitude_scaling: bool = True
+    aug_time_shift: bool = True
+    aug_freq_band_dropout: bool = True
+    use_focal_loss: bool = False
+    focal_gamma: float = PydanticField(default=2.0, ge=0.0, le=5.0)
+    label_smoothing: float = PydanticField(default=0.1, ge=0.0, le=0.5)
 
 
 @app.get("/api/sessions/all")
@@ -206,7 +220,23 @@ async def get_model_status():
 @app.post("/api/model/train")
 async def start_training(request: TrainRequest):
     """Start training the EEG-to-text model on the selected sessions."""
-    started = training_service.start_training(request.session_ids, request.epochs)
+    cfg = TrainingConfig(
+        lr=request.lr,
+        batch_size=request.batch_size,
+        warmup_epochs=request.warmup_epochs,
+        grad_clip=request.grad_clip,
+        early_stop_patience=request.early_stop_patience,
+        checkpoint_every_n=request.checkpoint_every_n,
+        aug_channel_dropout=request.aug_channel_dropout,
+        aug_gaussian_noise=request.aug_gaussian_noise,
+        aug_amplitude_scaling=request.aug_amplitude_scaling,
+        aug_time_shift=request.aug_time_shift,
+        aug_freq_band_dropout=request.aug_freq_band_dropout,
+        use_focal_loss=request.use_focal_loss,
+        focal_gamma=request.focal_gamma,
+        label_smoothing=request.label_smoothing,
+    )
+    started = training_service.start_training(request.session_ids, request.epochs, config=cfg)
     if not started:
         raise HTTPException(status_code=409, detail="Training is already in progress")
     return {"status": "started", "epochs": request.epochs, "session_ids": request.session_ids}
@@ -217,6 +247,21 @@ async def stop_training():
     """Signal the training thread to stop after the current epoch."""
     training_service.stop_training()
     return {"status": "stop_requested"}
+
+
+@app.get("/api/model/checkpoints")
+async def list_checkpoints():
+    """List all available model checkpoint files."""
+    return training_service.list_checkpoints()
+
+
+@app.post("/api/model/load/{checkpoint_name}")
+async def load_checkpoint_by_name(checkpoint_name: str):
+    """Load a specific checkpoint by filename."""
+    success = training_service.load_checkpoint_by_name(checkpoint_name)
+    if not success:
+        raise HTTPException(status_code=404, detail="Checkpoint not found or invalid")
+    return {"status": "loaded", "checkpoint": checkpoint_name}
 
 
 @app.get("/api/session/{session_id}/events")

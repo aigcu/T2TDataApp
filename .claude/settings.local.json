@@ -5,7 +5,19 @@
       "Bash(./venv/Scripts/pip.exe install:*)",
       "Bash(./venv/Scripts/python.exe -c \"import main; print\\(''OK''\\)\")",
       "Bash(./venv/Scripts/uvicorn.exe main:socket_app --host 0.0.0.0 --port 8000 --reload)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(./venv/Scripts/python.exe -c \"import ast, sys; files = [''model.py'', ''services/training_service.py'', ''main.py'']; [print\\(f''OK: {f}''\\) or ast.parse\\(open\\(f\\).read\\(\\)\\) for f in files]; print\\(''Syntax OK''\\)\")",
+      "Bash(./venv/Scripts/python.exe -c \":*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:8000/api/health)",
+      "Bash(curl -s http://localhost:8000/api/model/status)",
+      "Bash(curl -s http://localhost:8000/api/model/checkpoints)",
+      "Bash(curl -s http://localhost:8000/api/sessions/all)",
+      "Bash(curl -s \"http://localhost:8000/api/session/20260218_205006/events\")",
+      "Bash(./venv/Scripts/python.exe -c \"import ast; ast.parse\\(open\\(''services/training_service.py''\\).read\\(\\)\\); print\\(''Syntax OK''\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/model/train -H \"Content-Type: application/json\" -d '{\"\"session_ids\"\":[\"\"20260218_205006\"\"],\"\"epochs\"\":3,\"\"lr\"\":0.0002,\"\"batch_size\"\":8,\"\"warmup_epochs\"\":1,\"\"grad_clip\"\":1.0,\"\"early_stop_patience\"\":25,\"\"checkpoint_every_n\"\":5,\"\"aug_channel_dropout\"\":true,\"\"aug_gaussian_noise\"\":true,\"\"aug_amplitude_scaling\"\":true,\"\"aug_time_shift\"\":true}')",
+      "Bash(python -m json.tool)",
+      "Bash(npx vite:*)"
     ]
   }
 }
