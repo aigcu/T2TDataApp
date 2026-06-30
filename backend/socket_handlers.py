@@ -65,7 +65,7 @@ def setup_socket_handlers(
             )
 
     @sio.event
-    async def connect_eeg(sid: str):
+    async def connect_eeg(sid: str, data: dict = None):
         """Attempt to connect to EEG hardware."""
         if not eeg_collector:
             await sio.emit(

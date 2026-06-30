@@ -263,6 +263,13 @@ async def load_checkpoint_by_name(checkpoint_name: str):
         raise HTTPException(status_code=404, detail="Checkpoint not found or invalid")
     return {"status": "loaded", "checkpoint": checkpoint_name}
 
+@app.delete("/api/model/checkpoints/{checkpoint_name}")
+async def delete_checkpoint(checkpoint_name: str):
+    """Delete a specific checkpoint by filename."""
+    deleted = training_service.delete_checkpoint(checkpoint_name)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Checkpoint not found or invalid")
+    return {"status": "deleted", "checkpoint": checkpoint_name}
 
 @app.get("/api/session/{session_id}/events")
 async def get_session_events(session_id: str):
