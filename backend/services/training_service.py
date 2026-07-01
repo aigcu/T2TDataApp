@@ -596,3 +596,14 @@ class TrainingService:
                 if line.startswith("event,"):
                     return i
         return 0
+
+    # ── Delete ──────────────────────────────────────────────────────────────────
+
+    def delete_checkpoint(self, name: str) -> bool:
+        if ".." in name or "/" in name or "\\" in name:
+            return False
+        path = self.checkpoints_dir / name
+        if path.exists():
+            path.unlink()
+            return True
+        return False
