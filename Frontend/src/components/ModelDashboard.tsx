@@ -286,10 +286,23 @@ export function ModelDashboard({ onBack, preSelectedSessionId }: ModelDashboardP
     await loadStatus();
   };
 
+  const handleDeleteSession = async (id: string) => {
+    if (!window.confirm(`Delete session ${id}? This cannot be undone.`)) return;
+    await fetch(`${API_URL}/api/session/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await loadSessions();
+  };
+
   const handleLoadCheckpoint = async (name: string) => {
     const res = await fetch(`${API_URL}/api/model/load/${encodeURIComponent(name)}`, { method: 'POST' });
     if (res.ok) { await loadStatus(); }
     else { alert('Failed to load checkpoint'); }
+  };
+
+  const handleDeleteCheckpoint = async (name: string) => {
+    if (!window.confirm(`Delete checkpoint ${name}? This cannot be undone.`)) return;
+    const res = await fetch(`${API_URL}/api/model/checkpoints/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (res.ok) { await loadStatus(); }
+    else { alert('Failed to delete checkpoint'); }
   };
 
   const isTraining = trainingStatus?.status === 'training';
@@ -417,6 +430,13 @@ export function ModelDashboard({ onBack, preSelectedSessionId }: ModelDashboardP
                                   Predict
                                 </Button>
                               )}
+                              <Button
+                                variant="destructive" size="sm"
+                                onClick={() => handleDeleteSession(s.session_id)}
+                                className="text-xs h-7 px-2"
+                              >
+                                Delete
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -757,6 +777,14 @@ export function ModelDashboard({ onBack, preSelectedSessionId }: ModelDashboardP
                               className="border-gray-600 text-gray-300 text-xs h-7 px-2"
                             >
                               Load
+                            </Button>
+                            <Button
+                              variant="destructive" size="sm"
+                              onClick={() => handleDeleteCheckpoint(c.name)}
+                              disabled={isTraining}
+                              className="text-xs h-7 px-2 ml-1"
+                            >
+                              Delete
                             </Button>
                           </td>
                         </tr>

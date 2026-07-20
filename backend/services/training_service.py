@@ -600,10 +600,11 @@ class TrainingService:
     # ── Delete ──────────────────────────────────────────────────────────────────
 
     def delete_checkpoint(self, name: str) -> bool:
-        if ".." in name or "/" in name or "\\" in name:
+        safe_name = Path(name).name
+        if safe_name != name or Path(name).suffix != ".pth":
             return False
-        path = self.checkpoints_dir / name
-        if path.exists():
-            path.unlink()
-            return True
-        return False
+        path = Path(CHECKPOINT_DIR) / safe_name
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
