@@ -416,7 +416,9 @@ class RealEEGDataset(torch.utils.data.Dataset):
         if np.abs(data).max() > 100.0:
             return None                                          # Artifact rejection
 
-        return data
+        # filtfilt returns a reversed view (negative strides) in float64;
+        # torch.from_numpy can't handle negative strides, so copy contiguously.
+        return np.ascontiguousarray(data, dtype=np.float32)
 
     def _load_csv(self, path: str) -> None:
         try:
